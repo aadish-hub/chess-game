@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chess Game with Database</title>
+<style>
+  body { font-family: Arial; display: flex; gap: 20px; padding: 20px; }
+  #board { width: 480px; height: 480px; display: grid; grid-template-columns: repeat(8, 1fr); }
+  .square { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; }
+  .white { background: #eee; }
+  .black { background: #777; color: white; }
+  #moves { width: 250px; height: 480px; overflow-y: auto; border: 1px solid #666; padding: 10px; }
+  h2 { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<div id="board"></div>
+
+<div>
+  <h2>Moves Database</h2>
+  <button onclick="resetDB()">Reset Database</button><br/><br/>
+  <div id="moves"></div>
+</div>
+
+<script>
+const boardElement = document.getElementById("board");
+const movesElement = document.getElementById("moves");
+
+// Unicode chess pieces
+let pieces = {
+  r:"♜", n:"♞", b:"♝", q:"♛", k:"♚", p:"♟",
+  R:"♖", N:"♘", B:"♗", Q:"♕", K:"♔", P:"♙"
+};
+
+// Initial board
+let board = [
+  ["r","n","b","q","k","b","n","r"],
+  ["p","p","p","p","p","p","p","p"],
+  ["","","","","","","",""],
+  ["","","","","","","",""],
+  ["","","","","","","",""],
+  ["","","","","","","",""],
+  ["P","P","P","P","P","P","P","P"],
+  ["R","N","B","Q","K","B","N","R"]
+];
+
+let selected = null;
+
+function drawBoard() {
+  boardElement.innerHTML = "";
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = document.createElement("div");
+      square.className = `square ${(row+col)%2===0 ? 'white':'black'}`;
+      square.dataset.row = row;
+      square.dataset.col = col;
+      square.textContent = pieces[board[row][col]] || "";
+      square.onclick = () => clickSquare(row, col);
+      boardElement.appendChild(square);
+    }
+  }
+}
+
+drawBoard();
+
+function clickSquare(r, c) {
+  if (!selected) {
+    if (board[r][c] !== "") selected = { r, c };
+  } else {
+    if (selected.r !== r || selected.c !== c) makeMove(selected.r, selected.c, r, c);
+    selected = null;
+  }
+}
+
+// Save move to localStorage database
+function saveToDB(move) {
+  let db = JSON.parse(localStorage.getItem("chessDB") || "[]");
+  db.push(move);
+  localStorage.setItem("chessDB", JSON.stringify(db));
+  loadMoves();
+}
+
+function loadMoves() {
+  let db = JSON.parse(localStorage.getItem("chessDB") || "[]");
+  movesElement.innerHTML = db.map((m,i)=> `${i+1}. ${m}`).join("<br>");
+}
+
+loadMoves();
+
+function resetDB() {
+  localStorage.removeItem("chessDB");
+  loadMoves();
+}
+
+function makeMove(sr, sc, dr, dc) {
+  const piece = board[sr][sc];
+  const capture = board[dr][dc];
+
+  board[dr][dc] = piece;
+  board[sr][sc] = "";
+
+  drawBoard();
+
+  const move = `${piece} ${String.fromCharCode(97+sc)}${8-sr} → ${String.fromCharCode(97+dc)}${8-dr}` + (capture ? ` (x${capture})` : "");
+  saveToDB(move);
+}
+</script>
+
+</body>
+</html>
